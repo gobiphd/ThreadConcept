@@ -1,0 +1,19 @@
+1. Change Shutdown port and shutdown value.
+    Port : 8008
+    Shutdown : What you want?(Capital letters) - Don't forgot it.
+
+Ex:
+    $ ./startup.sh
+        Check the server running or not in Browser.
+
+    How to shutdown the tomcat via port?
+
+    $ telnet localhost 8005
+        Trying 127.0.0.1...
+        Connected to localhost.
+        Escape character is '^]'.
+        SHUTDOWN --> Type like this.
+        Connection closed by foreign host.
+2. How to prevent shutdown the tomcat?
+    1. Server element in server.xml
+        <Server port="8005" shutdown="SHUTDOWN"> to <Server port="8008" shutdown="PLEASESHUTDOWN">

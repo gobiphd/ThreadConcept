@@ -1,0 +1,73 @@
+https://examples.javacodegeeks.com/enterprise-java/tomcat/apache-tomcat-hardening-tutorial/
+
+https://www.avajava.com/tutorials/categories/tomcat
+
+https://tomcat.apache.org/tomcat-8.0-doc/security-howto.html#web.xml
+
+https://geekflare.com/apache-tomcat-hardening-and-security-guide/
+
+https://developer.okta.com/blog/2018/07/30/10-ways-to-secure-spring-boot
+
+15 Ways To Secure Apache Tomcat :
+
+1. Don't run Tomcat as the root user.
+
+This line of advice applies to most web server platforms. Web-related services should not be run by user accounts with a high level of administative access. In Tomcat's case, a user with the minimum necessary OS permissions should be created exclusively to run the Tomcat process.
+
+2. Remove any default sample or test web applications.
+
+Most web server platforms also provide a set of sample or test web application for demo and learning purposes. These applications have been known to harbor vulnerabilities, and should be removed if not in use. Tomcat's examples web application is an application that should be removed to prevent exploitation.
+
+3. Put Tomcat's shutdown procedure on lockdown.
+
+This prevents malicious actors from shutting down Tomcat's web services. Either disable the shutdown port by setting the port attribute in the server.xml file to -1. If the port must be kept open, be sure to configure a strong password for shutdown.
+
+4. Disable support for TRACE requests.
+
+Though useful for debugging, enabling allowTrace can expose some browsers to an cross-site scripting XSS attack. This can be mitigated by disabling allowTrace in the server.xml file.
+
+5. Disable sending of the X-Powered-By HTTP header.
+
+If enabled, Tomcat will send information such as the Servlet and JSP specification versions and the full Tomcat version, among others. This gives attackers a workable starting point to craft an attack. To prevent this information leakage, disable the xpoweredBy attribute in the server.xml file.
+
+6. Disable SSL v3 to prevent POODLE attacks.
+
+POODLE is a SSL v3 protocol vulnerability discovered in 2014. An attacker can gain access to sensitive information such as passwords and browser cookies by exploiting this vulnerability; subsequently, SSL v3 (and SSL in general) should not be included in server.xml file under the sslEnabledProtocols attribute.
+
+7. Set the deployXML attribute to false in a hosted environment.
+
+The prevents would-be attackers from attempting to increase privileges to a web application by packaging an altered/custom context.xml. This is especially critical in hosted environments where other web applications sharing the same server resources cannot be trusted.
+
+8. Configure and use realms judiciously.
+
+Tomcat's realms are designed differently and their limitations should be understood before use. For example, the DataSourceRealm should be used in place of the JDBCRealm, as the latter is single threaded for all authentication/authorization options and not suited for production use. The  JAASRealm should also be avoided, as it is seldom used and sports an immature codebase.
+
+
+
+9. Set Tomcat to create new facade object for each request.
+
+This can be configured by setting the org.apache.catalina.connector.RECYCLE_FACADES system property to true. By doing this, you reduce the chance of a buggy application exposing data between requests.
+
+10. Ensure that access to resources is set to read-only. 
+
+This can be done by setting readonly to true under DefaultServlet, effectively preventing clients from deleting/modifying static resources on the server and uploading new resources.
+
+11. Disable Tomcat from displaying directory listings. 
+
+Listing the contents of directories with a large number of files can consume considerable system resources, and can therefore be used in a denial-of-service (DoS) attack. Setting listings to false under DefaultServlet mitigates this risk.
+
+12. Enable logging of network traffic.  
+
+In general, logs should generated and maintained on all levels (e.g., user access, Tomcat internals, et al), but network traffic logging is especially useful for breach assessment and forensics. To set up your Tomcat application to create logs of network traffic, use/configure the AccessLogValve component.
+
+13. Disable automated deployment if not in use.
+
+If you're running a fully-realized CI/CD pipeline, good for you—you'll need full use of Tomcat's host components. However, if not—be sure to set all the host attributes to false (autoDeploy, deployOnStartup, and deployXML) to prevent them from being compromised by an attacker.
+
+14. Disable or limit the Tomcat Manager Webapp.
+
+Tomcat Manager enables easy configuration and management of Tomcat instances through one web interface. Convenient, no doubt—for both authorized administrators and attackers. Alternative methods for administering Tomcat instances are therefore better, but if Tomcat Manager must be used, be sure to use its configuration options to limit your risk exposure.
+
+15. Limit the availability of connectors.
+
+Connectors by default listen to all interfaces. For better security, they should only listen to those required by your web application and ignore the rest. This can be accomplished by setting the address attribute of the connector element.
