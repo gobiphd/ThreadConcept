@@ -14,12 +14,18 @@ public final class LoadingThread extends Thread {
 
 	private String command;
 
+	private String userId;
+
+	private String datasetId;
+
 	private List<Integer> mappingList;
 
-	public LoadingThread(String strLoadingThreadCount, List<Integer> mappingList, String command) {
+	public LoadingThread(String strLoadingThreadCount, List<Integer> mappingList, String command, String userId, String datasetId) {
 		this.strLoadingThreadCount = strLoadingThreadCount;
 		this.mappingList = mappingList;
 		this.command = command;
+		this.userId = userId;
+		this.datasetId = datasetId;
 	}
 
 	@Override
@@ -28,15 +34,15 @@ public final class LoadingThread extends Thread {
 		int loadingThreadCount = 0;
 		int iterationCount = 0;
 		int mappingListSize = 0;
-		String cacheKey = "";
+		String loadKey = "";
+		String completedMappingPath = userId+"/"+datasetId;
 		List<Future<Map<String, Object>>> list = new CopyOnWriteArrayList<>();
+		Map<String, String> completedMappingMap = null;
 		Future<Map<String, Object>> future = null;
 		ExecutorService executor = null;
 		QueueSemaphore queueSemaphore = null;
-		CacheManager cacheManager = null;
 		try {
 			executor = Executors.newCachedThreadPool();
-			cacheManager = CacheManager.getInstance();
 
 			if (strLoadingThreadCount != null && !strLoadingThreadCount.isEmpty()) {
 				loadingThreadCount = Integer.parseInt(strLoadingThreadCount);
@@ -53,23 +59,29 @@ public final class LoadingThread extends Thread {
 
 					while (true) {
 
-						for (Integer newMappingId : mappingList) {
-							try {
-								String extCacheKey = "TRANS_"+newMappingId;
-								String status = (String)cacheManager.get(extCacheKey);
+						completedMappingMap = FileUtils.getListOfCompletedMapping(completedMappingPath);
 
-								if ("SUCCESS".equals(status)) {
-									cacheManager.remove(extCacheKey);
-									iterationCount++;
-									future = queueSemaphore.submit(new LoadingMappingThread(newMappingId, command));
+						if (completedMappingMap != null && completedMappingMap.size() > 0) {
 
-									list.add(future);
-								} else if ("FAIL".equals(status)) {
-									cacheManager.remove(extCacheKey);
-									iterationCount++;
+							for (Integer newMappingId : mappingList) {
+								try {
+									String transKey = "TRANS_"+newMappingId;
+									String status = completedMappingMap.get(transKey);
+
+									String filePath = FileUtils.getFilePath(completedMappingPath, transKey, status);
+									FileUtils.deleteQuietly(filePath);
+
+									if ("SUCCESS".equals(status)) {
+										iterationCount++;
+										future = queueSemaphore.submit(new LoadingMappingThread(newMappingId, command));
+
+										list.add(future);
+									} else if ("FAIL".equals(status)) {
+										iterationCount++;
+									}
+								} catch (InterruptedException e) {
+									e.printStackTrace();
 								}
-							} catch (InterruptedException e) {
-								e.printStackTrace();
 							}
 						}
 
@@ -82,10 +94,13 @@ public final class LoadingThread extends Thread {
 										String status = (String)returnMap.get("STATUS");
 										int mappingId = (int)returnMap.get("MAPPING_ID");
 
-										cacheKey = "LOAD_"+mappingId;
-										cacheManager.put(cacheKey, status);
+										loadKey = "LOAD_"+mappingId;
+
+										String filePath = FileUtils.getFilePath(completedMappingPath, loadKey, status);
+										FileUtils.touch(filePath);
+
 										list.remove(futureMap);
-										System.out.println("Loading :: "+cacheKey+" ==> "+status);
+										System.out.println("Loading :: "+loadKey+" ==> "+status);
 									}
 								} catch (InterruptedException | ExecutionException e) {
 									e.printStackTrace();

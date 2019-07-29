@@ -14,28 +14,33 @@ public final class ExtractThread extends Thread {
 
 	private String command;
 
+	private String userId;
+
+	private String datasetId;
+
 	private List<Integer> mappingList;
 
-	public ExtractThread(String strExtractThreadCount, List<Integer> mappingList, String command) {
+	public ExtractThread(String strExtractThreadCount, List<Integer> mappingList, String command, String userId, String datasetId) {
 		this.strExtractThreadCount = strExtractThreadCount;
 		this.mappingList = mappingList;
 		this.command = command;
+		this.userId = userId;
+		this.datasetId = datasetId;
 	}
 
 	@Override
 	public void run() {
 		System.out.println("ExtractThread Started!");
 		int extractThreadCount = 0;
-		String cacheKey = "";
-		String transCacheKey = "";
+		String extKey = "";
+		String transKey = "";
+		String completedMappingPath = userId+"/"+datasetId;
 		List<Future<Map<String, Object>>> list = new CopyOnWriteArrayList<>();
 		Future<Map<String, Object>> future = null;
 		ExecutorService executor = null;
 		QueueSemaphore queueSemaphore = null;
-		CacheManager cacheManager = null;
 		try {
 			executor = Executors.newCachedThreadPool();
-			cacheManager = CacheManager.getInstance();
 
 			if (strExtractThreadCount != null && !strExtractThreadCount.isEmpty()) {
 				extractThreadCount = Integer.parseInt(strExtractThreadCount);
@@ -46,13 +51,17 @@ public final class ExtractThread extends Thread {
 			}
 
 			if (queueSemaphore != null) {
-				for (Integer newMappingId : mappingList) {
-					try {
-						future = queueSemaphore.submit(new ExtractMappingThread(newMappingId, command));
 
-						list.add(future);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+				if (mappingList != null && mappingList.size() > 0) {
+
+					for (Integer newMappingId : mappingList) {
+						try {
+							future = queueSemaphore.submit(new ExtractMappingThread(newMappingId, command));
+
+							list.add(future);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 					}
 				}
 
@@ -65,16 +74,18 @@ public final class ExtractThread extends Thread {
 								String status = (String)returnMap.get("STATUS");
 								int mappingId = (int)returnMap.get("MAPPING_ID");
 
-								cacheKey = "EXT_"+mappingId;
-								transCacheKey = "TRANS_"+mappingId;
+								extKey = "EXT_"+mappingId;
+								transKey = "TRANS_"+mappingId;
 
-								cacheManager.put(cacheKey, status);
+								String extFilePath = FileUtils.getFilePath(completedMappingPath, extKey, status);
+								FileUtils.touch(extFilePath);
 
 								if ("FAIL".equals(status)) {
-									cacheManager.put(transCacheKey, status);
+									String transFilePath = FileUtils.getFilePath(completedMappingPath, transKey, status);
+									FileUtils.touch(transFilePath);
 								}
 								list.remove(futureMap);
-								System.out.println("Extract :: "+cacheKey+" ==> "+status);
+								System.out.println("Extract :: "+extKey+" ==> "+status);
 							}
 						} catch (InterruptedException | ExecutionException e) {
 							e.printStackTrace();
